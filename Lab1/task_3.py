@@ -29,10 +29,11 @@ def johnson_sequence(jobs):
         return None  # Алгоритм только для 3 станков
 
     # Всё остальное аналогично второму заданию
-    cond1 = all(j["times"][0] >= j["times"][1] for j in jobs)
-    cond2 = all(j["times"][2] >= j["times"][1] for j in jobs)
-    if not (cond1 or cond2):
-        return None
+    min_a = min(j["a"] for j in jobs)
+    max_b = max(j["b"] for j in jobs)
+    min_c = min(j["c"] for j in jobs)
+    cond1 = min_a >= max_b
+    cond2 = min_c >= max_b
 
     new_jobs = []
     for j in jobs:
@@ -83,7 +84,7 @@ def schedule(jobs, sequence):
 # Полный перебор всех возможных вариантов (n!)
 def brute_force(jobs):
     best_seq = None # оптимальная последовательность работ
-    best_ms = float("inf") # лучшее (минимальное) время завершения всех работ, изначально бесконечность
+    best_ms = float("inf") # лучшее (минимальное) время завершения всех работ, изначально бесконечность для корректного сравнения
 
     # itertools.permutations генерирует все возможные перестановки работ
     for perm in itertools.permutations([j["id"] for j in jobs]):
@@ -124,7 +125,7 @@ def draw_gantt(canvas, sched, title, y_offset, scale=20):
 
 
 
-jobs = load_jobs("jobs.csv")
+jobs = load_jobs("Lab1\jobs.csv")
 
 orig_seq = [j["id"] for j in jobs]
 sched_orig, ms_orig = schedule(jobs, orig_seq)

@@ -131,7 +131,7 @@ def draw_gantt(canvas, sched, title, y_offset, scale=20):
 
 
 # Загружаем задачи
-jobs = load_jobs("jobs.csv")
+jobs = load_jobs("Lab1\jobs.csv")
 
 # Исходная и оптимальная последовательности
 orig_seq = [j["id"] for j in jobs]
