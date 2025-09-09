@@ -18,14 +18,17 @@ def load_jobs(filename):
 # Алгоритм Джонсона для 3-х станков
 def johnson_sequence(jobs):
     # Проверяем возможность применения алгоритма Джонсона для 3-х станков
-    # Если a >= b или c >= b для всех работ, то можно преобразовать к 2-м станкам:
+    # Если min(a) >= max(b) или min(c) >= max(b) для всех работ, то можно преобразовать к 2-м станкам:
     #    d = a + b
     #    e = b + c
     # После этого применяем обычный алгоритм Джонсона для 2-х станков
 
     # Проверка условия
-    cond1 = all(j["a"] >= j["b"] for j in jobs)
-    cond2 = all(j["c"] >= j["b"] for j in jobs)
+    min_a = min(j["a"] for j in jobs)
+    max_b = max(j["b"] for j in jobs)
+    min_c = min(j["c"] for j in jobs)
+    cond1 = min_a >= max_b
+    cond2 = min_c >= max_b
     if not (cond1 or cond2):
         return None  # Алгоритм Джонсона неприменим
 
@@ -117,7 +120,7 @@ def draw_gantt(canvas, sched, title, y_offset, scale=20):
         canvas.create_text(x, y_m3+30, text=str(t), font=("Arial",8))
 
 
-jobs = load_jobs("jobs.csv")
+jobs = load_jobs("Lab1\jobs.csv")
 
 orig_seq = [j["id"] for j in jobs]
 opt_seq = johnson_sequence(jobs)
