@@ -314,7 +314,7 @@ sched_brute, _ = schedule(jobs, brute_seq)
 
 # Интерфейс
 root = tk.Tk()
-root.title(f"Метод Петрова + Генетика + Перебор (станков: {len(jobs[0]['times'])})")
+root.title(f"Метод Петрова + Случайный + Перебор (станков: {len(jobs[0]['times'])})")
 
 # Верхняя панель
 frame = ttk.Frame(root)
