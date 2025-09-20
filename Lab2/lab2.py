@@ -39,12 +39,24 @@ def schedule(jobs, sequence):
         start_finish = {}
         for m in range(num_machines):
             if m == 0:
-                s = machine_times[m]
+                # Для первой операции на первой машине старт зависит от свободного времени первой машины.
+                # Если время обработки равно 0 — мы НЕ ставим машину в очередь (она не будет блокировать),
+                # но старт вычисляем по доступности этой машины (поддерживаем последовательность)
+                s = machine_times[0]
             else:
-                s = max(machine_times[m], start_finish[m-1][1])
+                if times[m] == 0:
+                    # Нулевая операция не занимает станок: старт равен окончанию предыдущей операции детали
+                    s = start_finish[m - 1][1]
+                else:
+                    # Обычная операция: старт не раньше освобождения станка и окончания предыдущей операции детали
+                    s = max(machine_times[m], start_finish[m - 1][1])
             f = s + times[m]
             start_finish[m] = (s, f)
-            machine_times[m] = f
+            # Обновляем время освобождения станка только если операция действительно занимает станок.
+            # Для нулевой операции не меняем machine_times[m], чтобы она не блокировала других
+            if times[m] != 0:
+                machine_times[m] = f
+            # Для первой машины также не блокируем, если time==0 (т.е. выше covered)
         sched.append({"id": jid, "ops": start_finish})
 
     makespan = machine_times[-1]  # время завершения на последнем станке
@@ -174,27 +186,30 @@ def petrov_sequences(jobs):
            [p["id"] for p in sort_by_P1(D0)] + \
            [p["id"] for p in sort_by_P2(D2)]
 
-    # Правило 4: попарное упорядочение в D1, затем D0, затем D2.
+    # Правило 4: попарное упорядочение в D1, затем D0, затем D2
     # Попарное: первая в паре = max по P2 (при равенстве учитываем lambda),
     # вторая = min по P1 (при равенстве учитываем lambda), остатки объединяем
-    def pairwise_order(lst):
+    def pairwise_order_and_sort(lst):
+        # Формируем пары (first=max P2, second=min P1) пока возможно,
+        # затем сортируем полученные пары по убыванию (first.P2 - second.P1)
         a = lst.copy()
         pairs = []
         while len(a) >= 2:
-            # первая = max по P2, потом по lambda
             first = max(a, key=lambda x: (x["P2"], x["lambda"], -x["id"]))
             a.remove(first)
-            # вторая = min по P1, при равенстве по lambda (правило 2 — по lambda убыванию)
             second = min(a, key=lambda x: (x["P1"], -x["lambda"], x["id"]))
             a.remove(second)
             pairs.append((first, second))
         leftover = a[0] if a else None
+
+        # сортируем пары по убыванию разности (P2_first - P1_second)
+        pairs.sort(key=lambda pr: (pr[0]["P2"] - pr[1]["P1"]), reverse=True)
         return pairs, leftover
 
     seq4_list = []
 
-    # D1 попарно
-    pairs1, leftover1 = pairwise_order(D1)
+    # 1) D1: попарно + сортировка пар по delta
+    pairs1, leftover1 = pairwise_order_and_sort(D1)
 
     # если остался одиночный из D1 — пытаемся подобрать партнёра из D0 (min P1),
     # если D0 нет — из D2 (min P1)
@@ -202,40 +217,83 @@ def petrov_sequences(jobs):
         if D0:
             candidate = min(D0, key=lambda x: (x["P1"], -x["lambda"], x["id"]))
             D0 = [x for x in D0 if x["id"] != candidate["id"]]
+            # добавим пару (leftover1, candidate) — её тоже нужно включить в список пар D1
             pairs1.append((leftover1, candidate))
+            # после добавления пары сортируем пары по delta заново
+            pairs1.sort(key=lambda pr: (pr[0]["P2"] - pr[1]["P1"]), reverse=True)
             leftover1 = None
         elif D2:
             candidate = min(D2, key=lambda x: (x["P1"], -x["lambda"], x["id"]))
             D2 = [x for x in D2 if x["id"] != candidate["id"]]
             pairs1.append((leftover1, candidate))
+            pairs1.sort(key=lambda pr: (pr[0]["P2"] - pr[1]["P1"]), reverse=True)
             leftover1 = None
 
-    for a,b in pairs1:
+    # распакуем отсортированные пары D1 в итоговый список
+    for a, b in pairs1:
         seq4_list.append(a)
         seq4_list.append(b)
 
-    # D0 попарно
-    pairs0, leftover0 = pairwise_order(D0)
-    for a,b in pairs0:
+    # 2) D0: попарно + сортировка пар по delta
+    pairs0, leftover0 = pairwise_order_and_sort(D0)
+    for a, b in pairs0:
         seq4_list.append(a)
         seq4_list.append(b)
+
+    # если остался leftover0 — паруем с D2 по min P1 (как в методичке)
     if leftover0:
         if D2:
             candidate = min(D2, key=lambda x: (x["P1"], -x["lambda"], x["id"]))
             D2 = [x for x in D2 if x["id"] != candidate["id"]]
+            # добавим новую пару (leftover0, candidate) — и положим её в конец текущего списка пар D0
             seq4_list.append(leftover0)
             seq4_list.append(candidate)
+            leftover0 = None
         else:
+            # если D2 тоже пусто — просто добавляем остаток
             seq4_list.append(leftover0)
+            leftover0 = None
 
-    # D2 попарно
-    pairs2, leftover2 = pairwise_order(D2)
-    for a,b in pairs2:
+    # 3) D2: попарно + сортировка пар по delta
+    pairs2, leftover2 = pairwise_order_and_sort(D2)
+    for a, b in pairs2:
         seq4_list.append(a)
         seq4_list.append(b)
-    if leftover2:
-        seq4_list.append(leftover2)
 
+    # Если в итоге остался одиночный элемент dx (всего n нечетно), то нужно
+    # вклинить его между парами по условию из методички.
+    dx = None
+    if leftover2:
+        dx = leftover2
+    # также возможно, что после всех действий остался одиночный, например, если
+    # сначала не было D2, а leftover0 был добавлен как одиночный и т.д.
+    # проверим, есть ли ещё одиночный в seq4_list (если общее число элементов нечетно)
+    total_count = len(seq4_list) + (1 if dx is not None else 0)
+    if total_count % 2 == 1 and dx is not None:
+        # попарные блоки в seq4_list: (0,1),(2,3),...
+        placed = False
+        num_pairs = len(seq4_list) // 2
+        for p in range(num_pairs - 1):
+            # левая пара: indices 2*p,2*p+1 ; правая пара: indices 2*(p+1),2*(p+1)+1
+            left1 = seq4_list[2 * p]
+            left2 = seq4_list[2 * p + 1]
+            right1 = seq4_list[2 * (p + 1)]
+            right2 = seq4_list[2 * (p + 1) + 1]
+            max_left_lambda = max(left1["lambda"], left2["lambda"])
+            min_right_lambda = min(right1["lambda"], right2["lambda"])
+            if max_left_lambda >= dx["lambda"] and dx["lambda"] >= min_right_lambda:
+                # вставляем dx между парами: после 2*p+1
+                insert_pos = 2 * p + 2
+                seq4_list.insert(insert_pos, dx)
+                placed = True
+                break
+        if not placed:
+            # если не нашли подходящее место — просто добавляем в конец (альтернативно можно
+            # попытаться вставить в начало; методичка допускает, что может не быть пары
+            # удовлетворяющей условию — тогда простая авто-стратегия)
+            seq4_list.append(dx)
+
+    # теперь преобразуем seq4_list (список словарей) в id-список
     seq4 = [p["id"] for p in seq4_list]
 
     return {"Петров-1": seq1, "Петров-2": seq2, "Петров-3": seq3, "Петров-4": seq4, "params": params}
