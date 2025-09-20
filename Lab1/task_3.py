@@ -99,7 +99,7 @@ def brute_force(jobs):
     # Преобразуем лучшую последовательность в список
     return list(best_seq)
 
-# Диаграмма Ганта
+# График Ганта
 def draw_gantt(canvas, sched, title, y_offset, scale=20):
     num_machines = len(sched[0]["ops"])
     canvas.create_text(10, y_offset, text=title, anchor="w", font=("Arial", 12, "bold"))
