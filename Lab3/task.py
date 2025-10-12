@@ -8,6 +8,8 @@ class SimplexSolver:
         self.max_iterations = 100  # Максимальное количество итераций
         self.basic_vars = []  # Для отслеживания базисных переменных
         self.all_vars = []   # Имена всех переменных
+
+        self.no_solution = False # есть или нет решения
         
     def load_from_csv(self, filename):
         # Загружает данные задачи из CSV-файла
@@ -107,6 +109,7 @@ class SimplexSolver:
             pivot_col = self.find_pivot_column(table, maximize)
             if pivot_col is None:
                 print("Не удалось найти разрешающий столбец")
+                self.no_solution = True
                 break
             
             entering_var = self.get_var_name(pivot_col, n)
@@ -116,6 +119,7 @@ class SimplexSolver:
             pivot_row = self.find_pivot_row(table, pivot_col)
             if pivot_row is None:
                 print("Задача не имеет конечного оптимального решения (F = ∞)")
+                self.no_solution = True
                 break
             
             leaving_var = self.basic_vars[-1][pivot_row]
@@ -136,12 +140,14 @@ class SimplexSolver:
             # Проверяем на зацикливание
             if self.check_cycling():
                 print("Обнаружено зацикливание!")
+                self.no_solution = True
                 break
 
             # выводим таблицу
             self.print_table(table, self.iteration)
         else:
             print("Достигнуто максимальное количество итераций")
+            self.no_solution = True
         
         return table
     
@@ -298,11 +304,12 @@ print(f"\n{'='*9}")
 print("Результат")
 print(f"{'='*9}")
 print(f"Количество итераций: {solver.iteration}")
-print(f"Статус: {'Оптимальное решение найдено' if solver.iteration < solver.max_iterations else 'Достигнут лимит итераций'}")
-    
-print(f"Оптимальное решение:")
-for i, var_name in enumerate(solver.all_vars):
-    if i < len(c):  # Только основные переменные
-        print(f"{var_name} = {solution[i]:.3f}")
-    
-print(f"Значение целевой функции F = {optimal_value:.3f}")
+print(f"Статус: {'Решения нет' if solver.no_solution else 'Оптимальное решение найдено'}")
+
+if (solver.no_solution == False):
+    print(f"Оптимальное решение:")
+    for i, var_name in enumerate(solver.all_vars):
+        if i < len(c):  # Только основные переменные
+            print(f"{var_name} = {solution[i]:.3f}")
+        
+    print(f"Значение целевой функции F = {optimal_value:.3f}")
