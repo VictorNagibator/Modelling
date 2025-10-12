@@ -304,12 +304,11 @@ print(f"\n{'='*9}")
 print("Результат")
 print(f"{'='*9}")
 print(f"Количество итераций: {solver.iteration}")
-print(f"Статус: {'Решения нет' if solver.no_solution else 'Оптимальное решение найдено'}")
+print(f"Статус: {'Оптимального решения нет' if solver.no_solution else 'Оптимальное решение найдено'}")
 
-if (solver.no_solution == False):
-    print(f"Оптимальное решение:")
-    for i, var_name in enumerate(solver.all_vars):
-        if i < len(c):  # Только основные переменные
-            print(f"{var_name} = {solution[i]:.3f}")
+print(f"Полученное решение:")
+for i, var_name in enumerate(solver.all_vars):
+    if i < len(c):  # Только основные переменные
+        print(f"{var_name} = {solution[i]:.3f}")
         
-    print(f"Значение целевой функции F = {optimal_value:.3f}")
+print(f"Значение целевой функции F = {optimal_value:.3f}")
