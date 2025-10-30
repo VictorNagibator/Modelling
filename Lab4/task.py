@@ -358,7 +358,7 @@ def read_input_from_csv(filename: str):
 
 # Чтение данных из файла
 try:
-    supplies, demands, costs = read_input_from_csv('input.csv')
+    supplies, demands, costs = read_input_from_csv('Lab4\\input.csv')
         
     print(f"Запасы: {supplies}")
     print(f"Потребности: {demands}")
